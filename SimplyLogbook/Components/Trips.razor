@@ -1,0 +1,154 @@
+﻿@page "/rides"
+
+@rendermode InteractiveServer
+
+@using Microsoft.EntityFrameworkCore
+@using SimplyLogbook.Entities
+@using SimplyLogbook.Data
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+
+@inject ApplicationDbContext dbContext
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@* ist dafür dass nur angemeldete user zu der seite zugriff haben *@
+@attribute [Authorize]
+
+<h3>Fahrten</h3>
+
+<EditForm Model="@newTrip" FormName="newTrip" OnValidSubmit="AddTrip">
+    		<div class="form-group">
+			<label for="vehicles" class="text-center">Vehicle</label>
+			<select id="vehicle" @bind="selectedVehicleId" class="form-control mb-3">
+				@foreach (var vehicle in vehicles)
+				{
+					<option value="@vehicle.VehicleId">
+						@vehicle.Brand @vehicle.Type
+					</option>
+				}
+			</select>
+		</div>
+
+    <div class="form-group">
+        <label for="date">Datum:</label>
+        <InputDate id="date" @bind-Value="newTrip.Date" />
+    </div>
+
+    <div class="form-group">
+        <label for="startTime">Startzeit:</label>
+        <InputDate id="startTime" @bind-Value="newTrip.StartTime" />
+    </div>
+
+    <div class="form-group">
+        <label for="endTime">Endzeit:</label>
+        <InputDate id="endTime" @bind-Value="newTrip.EndTime" />
+    </div>
+
+    <div class="form-group">
+        <label for="route">Reiseweg:</label>
+        <InputText id="route" @bind-Value="newTrip.Route" />
+    </div>
+
+    <div class="form-group">
+        <label for="purpose">Zweck der Fahrt:</label>
+        <InputText id="purpose" @bind-Value="newTrip.Purpose" />
+    </div>
+
+    <div class="form-group">
+        <label for="startMileage">KM-Stand Abfahrt:</label>
+        <InputNumber id="startMileage" @bind-Value="newTrip.StartMileage" />
+    </div>
+
+    <div class="form-group">
+        <label for="endMileage">KM-Stand Ankunft:</label>
+        <InputNumber id="endMileage" @bind-Value="newTrip.EndMileage" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Fahrt hinzufügen</button>
+</EditForm>
+
+@if (trips != null && trips.Any())
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Datum</th>
+                <th>Startzeit</th>
+                <th>Endzeit</th>
+                <th>Reiseweg</th>
+                <th>Zweck der Fahrt</th>
+                <th>KM-Stand Abfahrt</th>
+                <th>KM-Stand Ankunft</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var trip in trips)
+            {
+                <tr>
+                    <td>@trip.Date.ToShortDateString()</td>
+                    <td>@trip.StartTime.ToShortTimeString()</td>
+                    <td>@trip.EndTime.ToShortTimeString()</td>
+                    <td>@trip.Route</td>
+                    <td>@trip.Purpose</td>
+                    <td>@trip.StartMileage</td>
+                    <td>@trip.EndMileage</td>
+
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    // aktuell authentifizierter benutzer
+    ApplicationUser currentUser;
+
+    private Trip newTrip = new Trip();
+    private List<Trip> trips;
+    List<Vehicle> vehicles = new();
+    int selectedVehicleId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Authentifizierungsstatus abfragen, um den aktuellen Benutzer zu identifizieren
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var userClaims = authState.User;
+
+		if (userClaims.Identity.IsAuthenticated)
+		{
+			currentUser = await UserManager.GetUserAsync(userClaims);
+		}
+
+        // Initialisiert die Anzeige der Fahrten und Fahrzeuge
+        ReloadTrips();
+        vehicles = dbContext.Vehicles.ToList();
+    }
+
+    void AddTrip()
+    {
+        if (newTrip != null)
+        {
+            // Setzt den Benutzer für die neue Fahrt, basierend auf dem aktuell authentifizierten Benutzer
+            newTrip.ApplicationUserId = currentUser.Id;
+            newTrip.ApplicationUser = currentUser;
+
+            // hier wird das erste fahrzeug aus der db für die fahrt ausgewählt
+            // Auswahlmöglichkeit
+            newTrip.Vehicle = dbContext.Vehicles.First();
+            newTrip.VehicleId = dbContext.Vehicles.First().VehicleId;
+
+
+            dbContext.Trips.Add(newTrip);
+            dbContext.SaveChanges();
+            newTrip = new();
+            ReloadTrips();
+        }
+    }
+
+    // Lädt die Liste der Fahrten aus der Datenbank neu
+    void ReloadTrips() {
+        trips = dbContext.Trips.ToList();
+    }
+}

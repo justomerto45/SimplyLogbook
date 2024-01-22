@@ -1,0 +1,45 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Identity
+@using SimplyLogbook.Data
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hallo, @currentUser.Firstname</h1>
+
+<h1>Willkommen beim digitalen Fahrtenbuch!</h1>
+
+<div class="welcome-message">
+    <p>Herzlich willkommen zu deiner neuen digitalen Fahrtenbuch-App. 
+        Mit dieser Anwendung können Sie einfach und effizient Ihre Fahrten aufzeichnen und verwalten.</p>
+</div>
+
+<div class="features">
+    <h2>Funktionen:</h2>
+    <ul>
+        <li>Registrierung und Anmeldung von Mitarbeitern</li>
+        <li>Erfassung und Verwaltung von Fahrten</li>
+        <li>Übersicht über alle Fahrten pro Mitarbeiter</li>
+        <li>Verwaltung der Firmenfahrzeuge</li>
+    </ul>
+</div>
+
+
+
+@code {
+    ApplicationUser currentUser = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userClaims = authState.User;
+
+        if (userClaims.Identity.IsAuthenticated)
+        {
+            currentUser = await UserManager.GetUserAsync(userClaims);
+        }
+    }
+}

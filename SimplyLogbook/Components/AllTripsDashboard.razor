@@ -1,0 +1,75 @@
+﻿@page "/alltripsdashboard"
+@using SimplyLogbook.Data
+@using SimplyLogbook.Entities
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+
+@rendermode InteractiveServer
+
+@inject ApplicationDbContext dbContext
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@* ist dafür dass nur angemeldete user zu der seite zugriff haben *@
+@attribute [Authorize]
+
+<PageTitle>Alle Fahrten</PageTitle>
+
+<h2>All Trips</h2>
+<div class="container">
+	<table class="table">
+		<thead>
+			<tr>
+				<th>Fahrzeug</th>
+				<th>Datum</th>
+				<th>Zeit</th>
+				<th>Route</th>
+				<th>Gebrauch</th>
+				<th>Distanz</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			@foreach (var trip in trips)
+			{
+				<tr>
+					<td>@trip.Vehicle.Brand @trip.Vehicle.Type</td>
+					<td>@trip.Date.ToShortDateString()</td>
+					<td>@trip.GetTripDurationMinutes() min</td>
+					<td>@trip.Route</td>
+					<td>@trip.Purpose</td>
+					<td>@trip.GetDistance() km</td>
+				</tr>
+			}
+		</tbody>
+	</table>
+</div>
+@code {
+	ApplicationUser currentUser;
+	List<Trip> trips = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		// abrufen des authentifizierungsstatus des benutzers
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var userClaims = authState.User;
+
+		if (userClaims.Identity.IsAuthenticated)
+		{
+			currentUser = await UserManager.GetUserAsync(userClaims);
+		}
+
+		if (currentUser is null)
+			return;
+
+		// Lädt alle Fahrten für den authentifizierten Benutzer
+		trips = dbContext.Trips.Where(x => x.ApplicationUserId == currentUser.Id).ToList();
+		
+		// Ergänzt die Fahrzeuginformationen für jede Fahrt
+		trips.ForEach(x => x.Vehicle = dbContext.Vehicles.Find(x.VehicleId));
+
+		await base.OnInitializedAsync();
+	}
+}

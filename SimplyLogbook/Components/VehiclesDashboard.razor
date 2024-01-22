@@ -1,0 +1,85 @@
+﻿@page "/vehiclesdashboard"
+@using SimplyLogbook.Data
+@using SimplyLogbook.Entities
+@using Microsoft.AspNetCore.Authorization
+
+@rendermode InteractiveServer
+
+@inject ApplicationDbContext dbContext
+
+@attribute [Authorize]
+
+<PageTitle>Fahrzeug Dashboard</PageTitle>
+
+<h2>Add vehicle</h2>
+
+<div class="container">
+	<EditForm Model="@vehicle" FormName="addVehicle" OnValidSubmit="SaveVehicle">
+		<div class="form-group row">
+			<div class="form-group">
+				<label for="brand" class="text-center mb-2">Marke</label>
+				<input id="brand" class="form-control mb-2" @bind-value="vehicle.Brand" />
+			</div>
+		</div>
+		<div class="form-group row">
+			<div class="form-group">
+				<label for="type" class="text-center mb-2">Type</label>
+				<input id="type" class="form-control mb-2" @bind-value="vehicle.Type" />
+			</div>
+		</div>
+		<div class="form-group row">
+			<div class="form-group">
+				<label for="licensePlate" class="text-center mb-2">Kennzeichen</label>
+				<input id="licensePlate" class="form-control mb-2" @bind-value="vehicle.LicensePlate" />
+			</div>
+		</div>
+		<button class="btn btn-primary mt-2 align-self-center">Fahrzeug hinz.</button>
+	</EditForm>
+</div>
+
+<h2 class="mt-5">Alle Fahrzeuge</h2>
+<div class="container">
+	<table class="table">
+		<thead>
+			<tr>
+				<th>Marke</th>
+				<th>Type</th>
+				<th>Kennzeichen</th>
+			</tr>
+		</thead>
+		<tbody>
+			@foreach (var vehicle in vehicles)
+			{
+				<tr>
+					<td>@vehicle.Brand</td>
+					<td>@vehicle.Type</td>
+					<td>@vehicle.LicensePlate</td>
+				</tr>
+			}
+		</tbody>
+	</table>
+</div>
+
+@code {
+	// liste zum speichern aller fahrzeuge aus db
+	List<Vehicle> vehicles = new();
+	Vehicle vehicle = new();
+
+	protected override void OnInitialized()
+	{
+		base.OnInitialized();
+		// wenn initialise, dann werden alle fahrzeuge wieder von der db geladen
+		ReloadVehicles();
+	}
+
+	// methode zum neuladen der fahrzeugliste aus db
+	void ReloadVehicles() => vehicles = dbContext.Vehicles.ToList();
+
+	void SaveVehicle()
+	{
+		dbContext.Vehicles.Add(vehicle);
+		dbContext.SaveChanges();
+		vehicle = new Vehicle();
+		ReloadVehicles();
+	}
+}
